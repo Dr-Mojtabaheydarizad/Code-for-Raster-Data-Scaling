@@ -1,0 +1,65 @@
+# Load required libraries
+library(raster)
+
+# Function to scale raster data to global range
+scale_raster <- function(input_path, global_min, global_max) {
+  # Read raster data
+  r <- raster(input_path)
+  data <- as.matrix(r)
+  
+  # Scale data to global range
+  scaled_data <- ((data - min(data, na.rm = TRUE)) / (max(data, na.rm = TRUE) - min(data, na.rm = TRUE))) *
+    (global_max - global_min) + global_min
+  
+  return(raster(scaled_data, xmn = extent(r)[1], xmx = extent(r)[2], ymn = extent(r)[3], ymx = extent(r)[4]))
+}
+
+# Directory path where the raster files are located
+directory_path <- "D:/Education/Water journal-2/Isotope in enviromental and health studies/Revision-2/Supplementary File-3/"
+
+# Input and output file names
+measured_file <- "O-MEASURED.tif"
+lstm_file <- "O-LSTM.tif"
+dnn_file <- "O-DNN.tif"
+
+# Full paths to the raster files
+measured_raster_path <- paste0(directory_path, measured_file)
+lstm_raster_path <- paste0(directory_path, lstm_file)
+dnn_raster_path <- paste0(directory_path, dnn_file)
+
+# Define global scale based on the provided range
+global_min <- 5
+global_max <- -16
+
+# Apply scaling to each raster file
+scaled_measured <- scale_raster(measured_raster_path, global_min, global_max)
+scaled_lstm <- scale_raster(lstm_raster_path, global_min, global_max)
+scaled_dnn <- scale_raster(dnn_raster_path, global_min, global_max)
+
+# Function to save raster with specified resolution
+save_raster <- function(r, output_path, dpi = 300) {
+  # Get extent and resolution from original raster
+  ext <- extent(r)
+  res <- res(r)
+  
+  # Create raster with new resolution
+  r_resampled <- raster(ext, res = dpi / 25.4)  # Convert dpi to resolution in meters
+  
+  # Resample original raster to new resolution
+  r_resampled <- resample(r, r_resampled, method = "bilinear")
+  
+  # Write resampled raster to file
+  writeRaster(r_resampled, filename = output_path, format = "GTiff", overwrite = TRUE)
+  
+  print(paste("Scaled raster saved to", output_path))
+}
+
+# Output paths for the scaled raster files with 300 dpi resolution
+measured_output_path <- paste0(directory_path, "O-MEASURED_scaled.tif")
+lstm_output_path <- paste0(directory_path, "O-LSTM_scaled.tif")
+dnn_output_path <- paste0(directory_path, "O-DNN_scaled.tif")
+
+# Save scaled rasters with 300 dpi resolution
+save_raster(scaled_measured, measured_output_path, dpi = 600)
+save_raster(scaled_lstm, lstm_output_path, dpi = 600)
+save_raster(scaled_dnn, dnn_output_path, dpi = 600)
